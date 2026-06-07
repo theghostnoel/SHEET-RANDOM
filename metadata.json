@@ -1,0 +1,6 @@
+{
+  "name": "Google Sheets Randomizer",
+  "description": "Ứng dụng lấy dữ liệu ngẫu nhiên từ Google Sheets công khai và xuất danh sách được đánh số thứ tự phù hợp cho việc chọn mẫu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
