@@ -10,7 +10,7 @@ import { extractSheetInfo, buildExportUrl, parseCSVToRowsAndCells, shuffle } fro
 export default function App() {
   const [sheetUrl, setSheetUrl] = useState<string>('');
   const [sampleSize, setSampleSize] = useState<number>(20);
-  const [extractionMode, setExtractionMode] = useState<'rows' | 'cells'>('rows');
+  const [extractionMode, setExtractionMode] = useState<'rows' | 'cells'>('cells');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -30,7 +30,7 @@ export default function App() {
   const handleClear = () => {
     setSheetUrl('');
     setSampleSize(20);
-    setExtractionMode('rows');
+    setExtractionMode('cells');
     setError(null);
     setAllFetchedRows([]);
     setAllFetchedCells([]);
@@ -79,18 +79,6 @@ export default function App() {
     setLoading(true);
     setError(null);
     setWarningMessage(null);
-
-    // If we've already fetched this spreadsheet & tab, reuse the cached data to save network and allow fast re-rolls
-    const isNewSheet = currentLoadedSheetId !== info.sheetId;
-    
-    if (!isNewSheet && currentItemCandidates.length > 0) {
-      // Quick client-side random calculation
-      setTimeout(() => {
-        performRandomSample(currentItemCandidates, sampleSize);
-        setLoading(false);
-      }, 350);
-      return;
-    }
 
     try {
       const exportUrl = buildExportUrl(info.sheetId, info.gid);

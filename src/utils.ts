@@ -37,7 +37,7 @@ export function buildExportUrl(sheetId: string, gid: string | null): string {
 }
 
 /**
- * Simple yet robust CSV row parser that handles quotes and splits correctly.
+ * Robust CSV parser that handles internal commas, double quotes, and line breaks properly.
  */
 export function parseCSVToRowsAndCells(csvText: string): {
   rows: string[];
@@ -46,9 +46,10 @@ export function parseCSVToRowsAndCells(csvText: string): {
   const rows: string[] = [];
   const cells: string[] = [];
   
+  const records: string[][] = [];
+  let currentRecord: string[] = [];
   let currentField = '';
   let inQuotes = false;
-  let currentRowFields: string[] = [];
   
   for (let i = 0; i < csvText.length; i++) {
     const char = csvText[i];
@@ -56,48 +57,57 @@ export function parseCSVToRowsAndCells(csvText: string): {
     
     if (char === '"') {
       if (inQuotes && nextChar === '"') {
-        // Escaped quote
         currentField += '"';
-        i++; // skip next quote
+        i++; // Skip the second quote
       } else {
-        // Toggle quote state
         inQuotes = !inQuotes;
       }
     } else if (char === ',' && !inQuotes) {
-      currentRowFields.push(currentField.trim());
+      currentRecord.push(currentField);
       currentField = '';
     } else if ((char === '\n' || char === '\r') && !inQuotes) {
       if (char === '\r' && nextChar === '\n') {
-        i++; // skip standard \r\n line feed
+        i++;
       }
-      currentRowFields.push(currentField.trim());
+      currentRecord.push(currentField);
       currentField = '';
-      
-      // Process finished row
-      const joinedRow = currentRowFields.filter(f => f !== '').join(', ');
-      if (joinedRow) {
-        rows.push(joinedRow);
-      }
-      currentRowFields.forEach(cell => {
-        if (cell) cells.push(cell);
-      });
-      currentRowFields = [];
+      records.push(currentRecord);
+      currentRecord = [];
     } else {
       currentField += char;
     }
   }
   
-  // Handle remainder
-  if (currentField.trim() || currentRowFields.length > 0) {
-    currentRowFields.push(currentField.trim());
-    const joinedRow = currentRowFields.filter(f => f !== '').join(', ');
-    if (joinedRow) {
-      rows.push(joinedRow);
-    }
-    currentRowFields.forEach(cell => {
-      if (cell) cells.push(cell);
-    });
+  if (currentField !== '' || currentRecord.length > 0) {
+    currentRecord.push(currentField);
+    records.push(currentRecord);
   }
+  
+  // Clean, refine and filter records
+  records.forEach(rowFields => {
+    // Clean outer formatting quotes and trim spaces for each extracted cell
+    const cleanedFields = rowFields
+      .map(f => {
+        let cleaned = f.trim();
+        if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+          cleaned = cleaned.substring(1, cleaned.length - 1).trim();
+        }
+        // Unescape internal double quotes
+        return cleaned.replace(/""/g, '"');
+      })
+      // We want to skip completely empty cells to prevent empty slots in sample pool
+      .filter(f => f !== '');
+      
+    if (cleanedFields.length > 0) {
+      // 1. Build a text representation for the Row, separating columns cleanly
+      rows.push(cleanedFields.join(' | '));
+      
+      // 2. Add individual cells as unique sample items
+      cleanedFields.forEach(cell => {
+        cells.push(cell);
+      });
+    }
+  });
   
   return { rows, cells };
 }
